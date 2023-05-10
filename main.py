@@ -4,14 +4,14 @@ import requests
 from pathos.multiprocessing import ProcessingPool as Pool
 from threading import Thread, Barrier
 
+import re
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import multiprocessing
-
-url = 'https://section.blog.naver.com/Search/Post.naver?pageNo=1&rangeType=ALL&orderBy=sim&keyword=광안리'
 
 import logging
 log = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ class Naver:
     def __init__(self):
         self.driver = None
         self.url = 'https://section.blog.naver.com/Search/Post.naver'
+        self.page_num = 10
 
     def initialize_driver(self):
         options = Options()
@@ -62,6 +63,34 @@ class Naver:
         self.driver.close()
         return data
 
+    def preprocessing(self, sentence):
+        sentence = sentence.strip()
+        sentence = re.sub(r"[^0-9가-힣a-zA-Z#:?.!,¿]+", " ", sentence)  # \n도 공백으로 대체해줌
+        sentence = sentence.strip()
+
+        return sentence
+
+    def get_blog_content(self, url):
+        content = ""
+        try:
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            iframe = soup.find('iframe', id='mainFrame')
+            url = f'https://blog.naver.com{iframe["src"]}'
+            res = requests.get(url)
+            soup = BeautifulSoup(res.text, 'html.parser')
+            contents = soup.find_all('div', {'class': "se-main-container"})
+
+            for p_or_span in contents:
+                for text in p_or_span.find_all(['span', 'p']):
+                    text = text.get_text()
+                    if len(text) != 1:
+                        content += self.preprocessing(text)
+        except Exception as e:
+            log.info(str(e) + str(": 오류"))
+            pass
+        return content
+
     def run(self, keyword):
         num = self.get_blog_num(keyword)
         page = num / 10
@@ -77,8 +106,7 @@ class Naver:
 
 
 if __name__ == '__main__':
-    print(multiprocessing.cpu_count())
     naver = Naver()
     naver.initialize_driver()
-    a = naver.run('광안리')
-    print(a)
+    data = naver.run('광안리')
+    print(naver.get_blog_content(list(data[0].keys())[2]))
