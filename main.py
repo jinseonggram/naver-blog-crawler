@@ -1,9 +1,4 @@
-import logging
-
 import requests
-from pathos.multiprocessing import ProcessingPool as Pool
-from threading import Thread, Barrier
-
 import re
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -60,7 +55,6 @@ class Naver:
         for url in urls:
             _get_blogs_url(url)
 
-        self.driver.close()
         return data
 
     def preprocessing(self, sentence):
@@ -82,16 +76,16 @@ class Naver:
             contents = soup.find_all('div', {'class': "se-main-container"})
 
             for p_or_span in contents:
-                for text in p_or_span.find_all(['span', 'p']):
+                for text in p_or_span.find_all(['span']):
                     text = text.get_text()
                     if len(text) != 1:
-                        content += self.preprocessing(text)
+                        content += f' {self.preprocessing(text)}'
         except Exception as e:
             log.info(str(e) + str(": 오류"))
             pass
         return content
 
-    def run(self, keyword):
+    def run(self, keyword, is_close=None):
         num = self.get_blog_num(keyword)
         page = num / 10
 
@@ -102,7 +96,13 @@ class Naver:
             page = 10
 
         data = self.get_blogs_url(keyword, page)
+        if is_close:
+            self.driver.close()
+
         return data
+
+    def close(self):
+        self.driver.close()
 
 
 if __name__ == '__main__':
