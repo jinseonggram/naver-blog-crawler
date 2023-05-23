@@ -28,7 +28,7 @@ class Naver:
         options.add_argument('--disable-logging')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-gpu')
-        self.driver = webdriver.Chrome(executable_path='chromedriver', options=options)
+        self.driver = webdriver.Chrome(executable_path='chromedriver2', options=options)
 
     def get_blog_num(self, keyword):
         query = f'?pageNo=1&rangeType=ALL&orderBy=sim&keyword={keyword}'
