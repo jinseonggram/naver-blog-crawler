@@ -3,6 +3,7 @@ import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
 import json
+import requests
 
 
 class NaverBlog:
@@ -47,6 +48,29 @@ class NaverBlog:
         loop.run_until_complete(
             asyncio.gather(*(get_html(url_lst[i]) for i in range(len(url_lst))))
         )
+
+    def get_total_count(self, data):
+        """
+        해당 기간 총 블로그 개수 조회
+        :param data: 전체 html text  (res.text)
+        :return:
+        """
+        data = data.replace('\\', '')
+        start_index = data.find('"total":"') + 9
+        end_index = data[start_index:start_index + 50].find('"') + start_index
+        cnt = int(data[start_index:end_index])
+
+        return cnt
+
+    def sync_request(self):
+        """
+        동기 http 요청
+        :return: 블로그 개수
+        """
+        url = f'https://s.search.naver.com/p/blog/search.naver?where=blog&sm=tab_pge&api_type=1&query={self.keyword}&rev=44&start={int(self.start_page) * 30}&dup_remove=1&post_blogurl=&post_blogurl_without=&nso=so:dd,p:from{self.end_date}to{self.start_date}&nlu_query={{"r_category":"29+27"}}&dkey=0&source_query=&nx_search_query={self.keyword}&spq=0&_callback=viewMoreContents'
+        res = requests.get(url)
+        cnt = self.get_total_count(res.text)
+        return cnt
 
     def run(self):
         """
